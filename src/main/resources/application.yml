@@ -1,0 +1,40 @@
+spring:
+  application:
+    name: moneyleaks-api
+  datasource:
+    url: jdbc:postgresql://localhost:5433/moneyleaks
+    username: moneyleaks
+    password: moneyleaks
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    open-in-view: false
+    properties:
+      hibernate:
+        jdbc:
+          time_zone: UTC
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+  servlet:
+    multipart:
+      max-file-size: 10MB
+      max-request-size: 10MB
+
+server:
+  port: 8080
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics
+
+moneyleaks:
+  recurring:
+    min-occurrences: 2
+    amount-tolerance-percent: 5
+    monthly-min-days: 26
+    monthly-max-days: 35
+    yearly-min-days: 350
+    yearly-max-days: 380
