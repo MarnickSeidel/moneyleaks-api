@@ -6,3 +6,15 @@ target/
 .settings/
 .DS_Store
 *.log
+
+# Local config and secrets
+.env
+*.env
+application-local.yml
+application-secret.yml
+src/main/resources/application-local.yml
+src/main/resources/application-secret.yml
+
+# Real bank statement data (synthetic files under sample-data/ are intentionally tracked)
+/private-data/
+/real-statements/

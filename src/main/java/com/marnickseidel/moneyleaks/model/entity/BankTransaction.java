@@ -1,7 +1,10 @@
 package com.marnickseidel.moneyleaks.model.entity;
 
+import com.marnickseidel.moneyleaks.model.enums.PaymentMethod;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
@@ -37,6 +40,16 @@ public class BankTransaction {
 
     @Column(name = "merchant_normalized", nullable = false)
     private String merchantNormalized;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "payment_method", nullable = false, length = 32)
+    private PaymentMethod paymentMethod;
+
+    @Column(name = "transaction_type", length = 128)
+    private String transactionType;
+
+    @Column(name = "counterparty_iban", length = 34)
+    private String counterpartyIban;
 
     @Column(name = "created_at", nullable = false)
     private Instant createdAt;
@@ -87,6 +100,30 @@ public class BankTransaction {
 
     public void setMerchantNormalized(String merchantNormalized) {
         this.merchantNormalized = merchantNormalized;
+    }
+
+    public PaymentMethod getPaymentMethod() {
+        return paymentMethod;
+    }
+
+    public void setPaymentMethod(PaymentMethod paymentMethod) {
+        this.paymentMethod = paymentMethod;
+    }
+
+    public String getTransactionType() {
+        return transactionType;
+    }
+
+    public void setTransactionType(String transactionType) {
+        this.transactionType = transactionType;
+    }
+
+    public String getCounterpartyIban() {
+        return counterpartyIban;
+    }
+
+    public void setCounterpartyIban(String counterpartyIban) {
+        this.counterpartyIban = counterpartyIban;
     }
 
     public Instant getCreatedAt() {

@@ -16,6 +16,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.List;
 
 @Service
@@ -46,17 +47,6 @@ public class StatementProcessingService {
         Statement statement = statementRepository.findById(statementId)
                 .orElseThrow(() -> new StatementNotFoundException(statementId));
 
-        if (statement.getStatus() == StatementStatus.PROCESSED) {
-            int existingTransactions = bankTransactionRepository.findByStatementId(statementId).size();
-            return new StatementProcessResponse(
-                    statementId,
-                    statement.getStatus(),
-                    existingTransactions,
-                    subscriptionRepository.findByActiveTrueOrderByAmountDesc().size(),
-                    statement.getProcessedAt()
-            );
-        }
-
         statement.setStatus(StatementStatus.PROCESSING);
         statementRepository.save(statement);
 
@@ -75,16 +65,18 @@ public class StatementProcessingService {
                 entity.setDescription(tx.description());
                 entity.setAmount(tx.amount());
                 entity.setMerchantNormalized(tx.merchantNormalized());
+                entity.setPaymentMethod(tx.paymentMethod());
+                entity.setTransactionType(tx.transactionType());
+                entity.setCounterpartyIban(tx.counterpartyIban());
                 entity.setCreatedAt(now);
                 bankTransactionRepository.save(entity);
             }
 
-            List<DetectedSubscription> detected = recurringDetectionService.detect(parsed);
-            upsertSubscriptions(detected, now);
-
             statement.setStatus(StatementStatus.PROCESSED);
             statement.setProcessedAt(now);
             statementRepository.save(statement);
+
+            List<DetectedSubscription> detected = rebuildSubscriptions(now);
 
             return new StatementProcessResponse(
                     statementId,
@@ -98,6 +90,31 @@ public class StatementProcessingService {
             statementRepository.save(statement);
             throw ex;
         }
+    }
+
+    /**
+     * Re-run detection across every imported transaction so subscriptions from multiple
+     * statements stay consistent and stale false positives are removed.
+     */
+    private List<DetectedSubscription> rebuildSubscriptions(Instant now) {
+        subscriptionRepository.deactivateAll();
+
+        List<ParsedTransaction> allTransactions = new ArrayList<>();
+        for (BankTransaction entity : bankTransactionRepository.findAllByOrderByTransactionDateAsc()) {
+            allTransactions.add(new ParsedTransaction(
+                    entity.getTransactionDate(),
+                    entity.getDescription(),
+                    entity.getAmount(),
+                    entity.getMerchantNormalized(),
+                    entity.getPaymentMethod(),
+                    entity.getTransactionType(),
+                    entity.getCounterpartyIban()
+            ));
+        }
+
+        List<DetectedSubscription> detected = recurringDetectionService.detect(allTransactions);
+        upsertSubscriptions(detected, now);
+        return detected;
     }
 
     private void upsertSubscriptions(List<DetectedSubscription> detected, Instant now) {
@@ -118,6 +135,9 @@ public class StatementProcessingService {
             subscription.setFirstSeen(item.firstSeen());
             subscription.setLastSeen(item.lastSeen());
             subscription.setConfidence(item.confidence());
+            subscription.setSampleDescription(item.sampleDescription());
+            subscription.setSourceIban(item.sourceIban());
+            subscription.setPaymentMethod(item.paymentMethod());
             subscription.setActive(true);
 
             if (subscription.getCreatedAt() == null) {

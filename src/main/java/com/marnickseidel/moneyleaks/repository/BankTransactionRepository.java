@@ -12,6 +12,8 @@ public interface BankTransactionRepository extends JpaRepository<BankTransaction
 
     List<BankTransaction> findByStatementId(Long statementId);
 
+    List<BankTransaction> findAllByOrderByTransactionDateAsc();
+
     @Modifying
     @Query("delete from BankTransaction bt where bt.statement.id = :statementId")
     void deleteByStatementId(@Param("statementId") Long statementId);

@@ -2,7 +2,7 @@ spring:
   application:
     name: moneyleaks-api
   datasource:
-    url: jdbc:postgresql://localhost:5433/moneyleaks
+    url: jdbc:postgresql://localhost:5434/moneyleaks
     username: moneyleaks
     password: moneyleaks
   jpa:

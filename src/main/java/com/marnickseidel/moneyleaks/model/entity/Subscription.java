@@ -1,5 +1,6 @@
 package com.marnickseidel.moneyleaks.model.entity;
 
+import com.marnickseidel.moneyleaks.model.enums.PaymentMethod;
 import com.marnickseidel.moneyleaks.model.enums.SubscriptionInterval;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -49,6 +50,16 @@ public class Subscription {
 
     @Column(nullable = false)
     private boolean active;
+
+    @Column(name = "sample_description", length = 512)
+    private String sampleDescription;
+
+    @Column(name = "source_iban", length = 34)
+    private String sourceIban;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "payment_method", length = 32)
+    private PaymentMethod paymentMethod;
 
     @Column(name = "created_at", nullable = false)
     private Instant createdAt;
@@ -134,6 +145,30 @@ public class Subscription {
 
     public void setActive(boolean active) {
         this.active = active;
+    }
+
+    public String getSampleDescription() {
+        return sampleDescription;
+    }
+
+    public void setSampleDescription(String sampleDescription) {
+        this.sampleDescription = sampleDescription;
+    }
+
+    public String getSourceIban() {
+        return sourceIban;
+    }
+
+    public void setSourceIban(String sourceIban) {
+        this.sourceIban = sourceIban;
+    }
+
+    public PaymentMethod getPaymentMethod() {
+        return paymentMethod;
+    }
+
+    public void setPaymentMethod(PaymentMethod paymentMethod) {
+        this.paymentMethod = paymentMethod;
     }
 
     public Instant getCreatedAt() {

@@ -10,6 +10,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.time.LocalDate;
 import java.util.List;
 
 @Service
@@ -48,6 +49,17 @@ public class SubscriptionService {
         return subscription.getAmount();
     }
 
+    private LocalDate nextExpectedCharge(Subscription subscription) {
+        if (subscription.getLastSeen() == null) {
+            return null;
+        }
+        return switch (subscription.getIntervalType()) {
+            case MONTHLY -> subscription.getLastSeen().plusDays(30);
+            case YEARLY -> subscription.getLastSeen().plusDays(365);
+            case UNKNOWN -> null;
+        };
+    }
+
     private SubscriptionResponse toResponse(Subscription subscription) {
         return new SubscriptionResponse(
                 subscription.getId(),
@@ -58,7 +70,11 @@ public class SubscriptionService {
                 subscription.getOccurrenceCount(),
                 subscription.getFirstSeen(),
                 subscription.getLastSeen(),
-                subscription.getConfidence()
+                nextExpectedCharge(subscription),
+                subscription.getConfidence(),
+                subscription.getSampleDescription(),
+                subscription.getSourceIban(),
+                subscription.getPaymentMethod()
         );
     }
 }

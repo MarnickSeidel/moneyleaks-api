@@ -1,5 +1,6 @@
 package com.marnickseidel.moneyleaks.model.dto;
 
+import com.marnickseidel.moneyleaks.model.enums.PaymentMethod;
 import com.marnickseidel.moneyleaks.model.enums.SubscriptionInterval;
 
 import java.math.BigDecimal;
@@ -14,6 +15,10 @@ public record SubscriptionResponse(
         int occurrenceCount,
         LocalDate firstSeen,
         LocalDate lastSeen,
-        BigDecimal confidence
+        LocalDate nextExpectedCharge,
+        BigDecimal confidence,
+        String sampleDescription,
+        String sourceIban,
+        PaymentMethod paymentMethod
 ) {
 }
