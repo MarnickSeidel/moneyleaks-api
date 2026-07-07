@@ -38,3 +38,17 @@ moneyleaks:
     monthly-max-days: 35
     yearly-min-days: 350
     yearly-max-days: 380
+
+# Open Banking provider: GoCardless Bank Account Data API (formerly Nordigen).
+# Leave secret-id / secret-key blank until you have credentials; supply them via
+# environment variables (GOCARDLESS_SECRET_ID / GOCARDLESS_SECRET_KEY) in real
+# environments and never commit real values.
+gocardless:
+  api-url: https://bankaccountdata.gocardless.com/api/v2
+  secret-id: ${GOCARDLESS_SECRET_ID:}
+  secret-key: ${GOCARDLESS_SECRET_KEY:}
+  redirect-url: ${GOCARDLESS_REDIRECT_URL:http://localhost:8080/api/bank-connections/callback}
+  # While no credentials are configured, serve deterministic sample data so the
+  # connection/sync endpoints and detection pipeline can be exercised locally.
+  # MUST be false in production.
+  sample-data-enabled: true

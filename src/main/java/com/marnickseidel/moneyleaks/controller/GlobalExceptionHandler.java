@@ -1,5 +1,6 @@
 package com.marnickseidel.moneyleaks.controller;
 
+import com.marnickseidel.moneyleaks.banking.service.BankConnectionNotFoundException;
 import com.marnickseidel.moneyleaks.service.StatementNotFoundException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;
@@ -11,6 +12,11 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(StatementNotFoundException.class)
     public ProblemDetail handleNotFound(StatementNotFoundException ex) {
+        return ProblemDetail.forStatusAndDetail(HttpStatus.NOT_FOUND, ex.getMessage());
+    }
+
+    @ExceptionHandler(BankConnectionNotFoundException.class)
+    public ProblemDetail handleBankConnectionNotFound(BankConnectionNotFoundException ex) {
         return ProblemDetail.forStatusAndDetail(HttpStatus.NOT_FOUND, ex.getMessage());
     }
 
