@@ -1,6 +1,7 @@
 package com.marnickseidel.moneyleaks.repository;
 
 import com.marnickseidel.moneyleaks.model.entity.BankTransaction;
+import com.marnickseidel.moneyleaks.model.enums.TransactionSource;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
@@ -17,4 +18,8 @@ public interface BankTransactionRepository extends JpaRepository<BankTransaction
     @Modifying
     @Query("delete from BankTransaction bt where bt.statement.id = :statementId")
     void deleteByStatementId(@Param("statementId") Long statementId);
+
+    @Modifying
+    @Query("delete from BankTransaction bt where bt.source = :source")
+    void deleteBySource(@Param("source") TransactionSource source);
 }

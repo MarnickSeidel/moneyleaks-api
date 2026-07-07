@@ -5,6 +5,7 @@ import com.marnickseidel.moneyleaks.model.entity.BankTransaction;
 import com.marnickseidel.moneyleaks.model.entity.Statement;
 import com.marnickseidel.moneyleaks.model.entity.Subscription;
 import com.marnickseidel.moneyleaks.model.enums.StatementStatus;
+import com.marnickseidel.moneyleaks.model.enums.TransactionSource;
 import com.marnickseidel.moneyleaks.repository.BankTransactionRepository;
 import com.marnickseidel.moneyleaks.repository.StatementRepository;
 import com.marnickseidel.moneyleaks.repository.SubscriptionRepository;
@@ -59,17 +60,7 @@ public class StatementProcessingService {
 
             Instant now = Instant.now();
             for (ParsedTransaction tx : parsed) {
-                BankTransaction entity = new BankTransaction();
-                entity.setStatement(statement);
-                entity.setTransactionDate(tx.transactionDate());
-                entity.setDescription(tx.description());
-                entity.setAmount(tx.amount());
-                entity.setMerchantNormalized(tx.merchantNormalized());
-                entity.setPaymentMethod(tx.paymentMethod());
-                entity.setTransactionType(tx.transactionType());
-                entity.setCounterpartyIban(tx.counterpartyIban());
-                entity.setCreatedAt(now);
-                bankTransactionRepository.save(entity);
+                persistTransaction(tx, statement, TransactionSource.CSV_UPLOAD, now);
             }
 
             statement.setStatus(StatementStatus.PROCESSED);
@@ -90,6 +81,43 @@ public class StatementProcessingService {
             statementRepository.save(statement);
             throw ex;
         }
+    }
+
+    /**
+     * Shared ingestion seam for Open Banking. Transactions arrive already normalised (as
+     * {@link ParsedTransaction}, exactly like the CSV parser produces) and are persisted and
+     * fed into the very same detection pipeline the CSV flow uses. This is the single point
+     * where non-CSV sources join the core; there is no second detection engine.
+     *
+     * <p>Re-sync is idempotent: the previous Open Banking snapshot is replaced, mirroring how
+     * CSV re-processing clears a statement's rows first. CSV transactions are never touched.
+     *
+     * @return the number of subscriptions detected across all sources after ingestion
+     */
+    @Transactional
+    public int ingestOpenBankingTransactions(List<ParsedTransaction> transactions) {
+        Instant now = Instant.now();
+        bankTransactionRepository.deleteBySource(TransactionSource.OPEN_BANKING);
+        for (ParsedTransaction tx : transactions) {
+            persistTransaction(tx, null, TransactionSource.OPEN_BANKING, now);
+        }
+        return rebuildSubscriptions(now).size();
+    }
+
+    private void persistTransaction(
+            ParsedTransaction tx, Statement statement, TransactionSource source, Instant now) {
+        BankTransaction entity = new BankTransaction();
+        entity.setStatement(statement);
+        entity.setTransactionDate(tx.transactionDate());
+        entity.setDescription(tx.description());
+        entity.setAmount(tx.amount());
+        entity.setMerchantNormalized(tx.merchantNormalized());
+        entity.setPaymentMethod(tx.paymentMethod());
+        entity.setTransactionType(tx.transactionType());
+        entity.setCounterpartyIban(tx.counterpartyIban());
+        entity.setSource(source);
+        entity.setCreatedAt(now);
+        bankTransactionRepository.save(entity);
     }
 
     /**

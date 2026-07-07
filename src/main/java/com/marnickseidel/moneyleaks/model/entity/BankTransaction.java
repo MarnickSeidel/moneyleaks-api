@@ -1,6 +1,7 @@
 package com.marnickseidel.moneyleaks.model.entity;
 
 import com.marnickseidel.moneyleaks.model.enums.PaymentMethod;
+import com.marnickseidel.moneyleaks.model.enums.TransactionSource;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -25,8 +26,12 @@ public class BankTransaction {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "statement_id", nullable = false)
+    /**
+     * The CSV statement this transaction was parsed from. Null for transactions imported
+     * through Open Banking, which have no uploaded file backing them.
+     */
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "statement_id")
     private Statement statement;
 
     @Column(name = "transaction_date", nullable = false)
@@ -50,6 +55,10 @@ public class BankTransaction {
 
     @Column(name = "counterparty_iban", length = 34)
     private String counterpartyIban;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "source", nullable = false, length = 32)
+    private TransactionSource source = TransactionSource.CSV_UPLOAD;
 
     @Column(name = "created_at", nullable = false)
     private Instant createdAt;
@@ -124,6 +133,14 @@ public class BankTransaction {
 
     public void setCounterpartyIban(String counterpartyIban) {
         this.counterpartyIban = counterpartyIban;
+    }
+
+    public TransactionSource getSource() {
+        return source;
+    }
+
+    public void setSource(TransactionSource source) {
+        this.source = source;
     }
 
     public Instant getCreatedAt() {
