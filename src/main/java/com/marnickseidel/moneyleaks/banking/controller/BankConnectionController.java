@@ -13,6 +13,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -38,6 +39,19 @@ public class BankConnectionController {
         BankConnectionService.StartResult result =
                 bankConnectionService.start(request.provider(), request.institutionId());
         return BankConnectionResponse.from(result.connection(), result.consentUrl());
+    }
+
+    /**
+     * Enable Banking redirects the user's browser here after bank login with {@code code} and
+     * {@code state} query parameters. Register this exact URL in the Enable Banking application.
+     */
+    @GetMapping("/callback")
+    public BankConnectionResponse callback(
+            @RequestParam("code") String code,
+            @RequestParam("state") String state
+    ) {
+        BankConnection connection = bankConnectionService.completeAuthorization(code, state);
+        return BankConnectionResponse.from(connection);
     }
 
     @GetMapping("/{id}")

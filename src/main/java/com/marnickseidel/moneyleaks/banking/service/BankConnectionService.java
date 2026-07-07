@@ -15,6 +15,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
+import java.util.UUID;
 
 /**
  * Manages the {@link BankConnection} lifecycle: starting a consent session, reading status
@@ -41,19 +42,22 @@ public class BankConnectionService {
     private final BankSyncService bankSyncService;
     private final GoCardlessProperties goCardlessProperties;
     private final EnableBankingProperties enableBankingProperties;
+    private final EnableBankingBankProviderClient enableBankingClient;
 
     public BankConnectionService(
             BankConnectionRepository bankConnectionRepository,
             BankProviderRegistry providerRegistry,
             BankSyncService bankSyncService,
             GoCardlessProperties goCardlessProperties,
-            EnableBankingProperties enableBankingProperties
+            EnableBankingProperties enableBankingProperties,
+            EnableBankingBankProviderClient enableBankingClient
     ) {
         this.bankConnectionRepository = bankConnectionRepository;
         this.providerRegistry = providerRegistry;
         this.bankSyncService = bankSyncService;
         this.goCardlessProperties = goCardlessProperties;
         this.enableBankingProperties = enableBankingProperties;
+        this.enableBankingClient = enableBankingClient;
     }
 
     /**
@@ -68,10 +72,12 @@ public class BankConnectionService {
                 : providerKey;
         BankProviderClient provider = providerRegistry.get(resolvedProvider);
 
+        String oauthState = UUID.randomUUID().toString();
         BankConnectionSession session = provider.startConnection(new StartConnectionCommand(
                 institutionId,
                 redirectUrlFor(resolvedProvider),
-                PLACEHOLDER_USER_ID
+                PLACEHOLDER_USER_ID,
+                oauthState
         ));
 
         Instant now = Instant.now();
@@ -80,6 +86,7 @@ public class BankConnectionService {
         connection.setProvider(resolvedProvider);
         connection.setInstitutionId(institutionId);
         connection.setExternalConnectionId(session.externalConnectionId());
+        connection.setOauthState(oauthState);
         connection.setStatus(session.status() == null ? BankConnectionStatus.CREATED : session.status());
         connection.setCreatedAt(now);
         connection.setUpdatedAt(now);
@@ -117,6 +124,39 @@ public class BankConnectionService {
     public BankSyncService.BankSyncResult sync(Long id) {
         BankConnection connection = getRequired(id);
         return bankSyncService.sync(connection);
+    }
+
+    /**
+     * Second leg of the Enable Banking consent flow: the bank redirects here with a one-time
+     * {@code code} and the {@code state} we sent when starting the connection. Exchanges the code
+     * for a session id and marks the connection {@link BankConnectionStatus#ACTIVE}.
+     */
+    @Transactional
+    public BankConnection completeAuthorization(String code, String state) {
+        if (code == null || code.isBlank()) {
+            throw new BankAuthorizationException("Missing authorization code");
+        }
+        if (state == null || state.isBlank()) {
+            throw new BankAuthorizationException("Missing OAuth state");
+        }
+
+        BankConnection connection = bankConnectionRepository.findByOauthState(state)
+                .orElseThrow(() -> new BankAuthorizationException("Unknown OAuth state"));
+
+        if (!EnableBankingBankProviderClient.PROVIDER_KEY.equals(connection.getProvider())) {
+            throw new BankAuthorizationException(
+                    "OAuth callback is only supported for provider " + EnableBankingBankProviderClient.PROVIDER_KEY);
+        }
+
+        BankConnectionSession session = enableBankingClient.authorizeSession(code);
+        connection.setExternalConnectionId(session.externalConnectionId());
+        connection.setStatus(session.status() == null ? BankConnectionStatus.ACTIVE : session.status());
+        connection.setExpiresAt(session.expiresAt());
+        connection.setUpdatedAt(Instant.now());
+
+        BankConnection saved = bankConnectionRepository.save(connection);
+        log.info("Completed Enable Banking authorization for connection {}", saved.getId());
+        return saved;
     }
 
     @Transactional(readOnly = true)

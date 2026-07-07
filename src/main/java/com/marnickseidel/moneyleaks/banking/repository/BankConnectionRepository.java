@@ -8,4 +8,6 @@ import java.util.Optional;
 public interface BankConnectionRepository extends JpaRepository<BankConnection, Long> {
 
     Optional<BankConnection> findByExternalConnectionId(String externalConnectionId);
+
+    Optional<BankConnection> findByOauthState(String oauthState);
 }

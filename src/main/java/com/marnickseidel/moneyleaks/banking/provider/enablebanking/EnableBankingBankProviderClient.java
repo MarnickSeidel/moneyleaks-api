@@ -112,7 +112,7 @@ public class EnableBankingBankProviderClient implements BankProviderClient {
         ObjectNode aspsp = body.putObject("aspsp");
         aspsp.put("name", command.institutionId());
         aspsp.put("country", properties.getCountry());
-        body.put("state", UUID.randomUUID().toString());
+        body.put("state", command.oauthState() != null ? command.oauthState() : UUID.randomUUID().toString());
         body.put("redirect_url", resolveRedirectUrl(command));
         body.put("psu_type", properties.getPsuType());
 

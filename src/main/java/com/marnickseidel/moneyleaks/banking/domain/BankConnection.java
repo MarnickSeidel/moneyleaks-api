@@ -53,6 +53,10 @@ public class BankConnection {
     @Column(name = "expires_at")
     private Instant expiresAt;
 
+    /** Random state sent to the provider at consent start; echoed on redirect for callback lookup. */
+    @Column(name = "oauth_state", length = 64)
+    private String oauthState;
+
     public Long getId() {
         return id;
     }
@@ -123,5 +127,13 @@ public class BankConnection {
 
     public void setExpiresAt(Instant expiresAt) {
         this.expiresAt = expiresAt;
+    }
+
+    public String getOauthState() {
+        return oauthState;
+    }
+
+    public void setOauthState(String oauthState) {
+        this.oauthState = oauthState;
     }
 }
