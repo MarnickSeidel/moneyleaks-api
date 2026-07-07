@@ -18,3 +18,9 @@ src/main/resources/application-secret.yml
 # Real bank statement data (synthetic files under sample-data/ are intentionally tracked)
 /private-data/
 /real-statements/
+
+# Private keys / certificates (e.g. Enable Banking Application RSA key) - never commit
+*.pem
+*.key
+*.p12
+*.pfx

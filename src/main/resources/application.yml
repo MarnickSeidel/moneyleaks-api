@@ -52,3 +52,24 @@ gocardless:
   # connection/sync endpoints and detection pipeline can be exercised locally.
   # MUST be false in production.
   sample-data-enabled: true
+
+# Open Banking provider: Enable Banking (https://enablebanking.com). This is the default
+# provider (GoCardless does not onboard new individuals). Authentication uses an RS256 JWT
+# signed with the RSA private key of a registered Application; the JWT 'kid' is the
+# Application ID. Register the app + upload a self-signed certificate in the Enable Banking
+# control panel, then supply the values below via environment variables. Never commit the
+# Application ID, the private key file, or the key contents.
+enablebanking:
+  api-url: https://api.enablebanking.com
+  application-id: ${ENABLE_BANKING_APP_ID:}
+  # Path to the PKCS#8 PEM private key matching the uploaded certificate (keep it out of git),
+  # or supply the PEM contents inline via ENABLE_BANKING_PRIVATE_KEY.
+  private-key-path: ${ENABLE_BANKING_PRIVATE_KEY_PATH:}
+  private-key-pem: ${ENABLE_BANKING_PRIVATE_KEY:}
+  redirect-url: ${ENABLE_BANKING_REDIRECT_URL:http://localhost:8080/api/bank-connections/callback}
+  country: ${ENABLE_BANKING_COUNTRY:NL}
+  consent-valid-days: 90
+  psu-type: personal
+  jwt-ttl-seconds: 3600
+  # Serve deterministic sample data until real credentials are configured. MUST be false in production.
+  sample-data-enabled: true

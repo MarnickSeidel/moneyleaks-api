@@ -5,7 +5,8 @@ import com.marnickseidel.moneyleaks.banking.domain.BankConnection;
 import com.marnickseidel.moneyleaks.banking.domain.BankConnectionSession;
 import com.marnickseidel.moneyleaks.banking.domain.BankConnectionStatus;
 import com.marnickseidel.moneyleaks.banking.domain.StartConnectionCommand;
-import com.marnickseidel.moneyleaks.banking.provider.gocardless.GoCardlessBankProviderClient;
+import com.marnickseidel.moneyleaks.banking.provider.enablebanking.EnableBankingBankProviderClient;
+import com.marnickseidel.moneyleaks.banking.provider.enablebanking.EnableBankingProperties;
 import com.marnickseidel.moneyleaks.banking.provider.gocardless.GoCardlessProperties;
 import com.marnickseidel.moneyleaks.banking.repository.BankConnectionRepository;
 import org.slf4j.Logger;
@@ -26,23 +27,33 @@ public class BankConnectionService {
     /** No auth model yet - every connection is owned by this placeholder user. */
     public static final String PLACEHOLDER_USER_ID = "local-user";
 
+    /**
+     * Provider used when a start request omits an explicit provider. Enable Banking is the
+     * default real provider now that GoCardless does not onboard new individuals; GoCardless
+     * remains available by passing {@code provider=gocardless} explicitly.
+     */
+    public static final String DEFAULT_PROVIDER = EnableBankingBankProviderClient.PROVIDER_KEY;
+
     private static final Logger log = LoggerFactory.getLogger(BankConnectionService.class);
 
     private final BankConnectionRepository bankConnectionRepository;
     private final BankProviderRegistry providerRegistry;
     private final BankSyncService bankSyncService;
     private final GoCardlessProperties goCardlessProperties;
+    private final EnableBankingProperties enableBankingProperties;
 
     public BankConnectionService(
             BankConnectionRepository bankConnectionRepository,
             BankProviderRegistry providerRegistry,
             BankSyncService bankSyncService,
-            GoCardlessProperties goCardlessProperties
+            GoCardlessProperties goCardlessProperties,
+            EnableBankingProperties enableBankingProperties
     ) {
         this.bankConnectionRepository = bankConnectionRepository;
         this.providerRegistry = providerRegistry;
         this.bankSyncService = bankSyncService;
         this.goCardlessProperties = goCardlessProperties;
+        this.enableBankingProperties = enableBankingProperties;
     }
 
     /**
@@ -53,13 +64,13 @@ public class BankConnectionService {
     @Transactional
     public StartResult start(String providerKey, String institutionId) {
         String resolvedProvider = (providerKey == null || providerKey.isBlank())
-                ? GoCardlessBankProviderClient.PROVIDER_KEY
+                ? DEFAULT_PROVIDER
                 : providerKey;
         BankProviderClient provider = providerRegistry.get(resolvedProvider);
 
         BankConnectionSession session = provider.startConnection(new StartConnectionCommand(
                 institutionId,
-                goCardlessProperties.getRedirectUrl(),
+                redirectUrlFor(resolvedProvider),
                 PLACEHOLDER_USER_ID
         ));
 
@@ -112,6 +123,13 @@ public class BankConnectionService {
     public BankConnection getRequired(Long id) {
         return bankConnectionRepository.findById(id)
                 .orElseThrow(() -> new BankConnectionNotFoundException(id));
+    }
+
+    /** The redirect URL the resolved provider should return the user to after bank authentication. */
+    private String redirectUrlFor(String providerKey) {
+        return EnableBankingBankProviderClient.PROVIDER_KEY.equals(providerKey)
+                ? enableBankingProperties.getRedirectUrl()
+                : goCardlessProperties.getRedirectUrl();
     }
 
     /**
